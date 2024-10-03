@@ -12,12 +12,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 FRONT_URL = os.getenv("FRONT_URL")
-
+UPLOAD_DIRECTORY= os.getenv("UPLOAD_DIRECTORY")
 # Create FastAPI instance
 app = FastAPI()
 
 # Set up uploads directory for image storage
-UPLOAD_DIRECTORY = "uploads/"
 if not os.path.exists(UPLOAD_DIRECTORY):
     os.makedirs(UPLOAD_DIRECTORY)
 
