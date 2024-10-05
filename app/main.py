@@ -17,6 +17,7 @@ UPLOAD_DIRECTORY= os.getenv("UPLOAD_DIRECTORY")
 app = FastAPI()
 
 # Set up uploads directory for image storage
+# This code will be deleted when it should be released to production 
 if not os.path.exists(UPLOAD_DIRECTORY):
     os.makedirs(UPLOAD_DIRECTORY)
 
