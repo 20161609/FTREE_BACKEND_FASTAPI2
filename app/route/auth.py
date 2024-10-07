@@ -3,7 +3,7 @@
 from typing import Optional
 from app.db.model import Branch, Transaction
 from app.db.model import Auth, EmailVerification, Token
-from app.lib.user import refresh_access_token, create_refresh_token, decode_access_token, hash_password, verify_password, create_access_token, is_valid_password
+from app.lib.user import generate_valid_password, refresh_access_token, create_refresh_token, decode_access_token, hash_password, verify_password, create_access_token, is_valid_password
 from app.db.init import database
 from datetime import datetime, timedelta
 from fastapi import Form, Response, APIRouter, Body, HTTPException, Query, status, Request, Response
@@ -408,3 +408,42 @@ async def update_user(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update user information: {str(e)}")
     
     return {"status": "success", "message": "User information updated successfully."}
+
+# Forget Password? -> Update Temporary Password and Send Email
+@router.post("/forget-password/")
+async def forget_password(data: dict = Body(...)):
+    email = data.get('email')
+    if not email:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is required.")
+
+    user = await database.fetch_one(Auth.__table__.select().where(Auth.email == email))
+    # if not user: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User does not exist.")
+
+    # Generate temporary password
+    temp_password = generate_valid_password(8)
+    hashed_password = hash_password(temp_password)
+    print('temp_password', temp_password)
+    print('hashed_password', hashed_password)
+
+    # Update the password in the Auth table
+    try:
+        update_query = Auth.__table__.update().where(Auth.email == email).values(password=hashed_password)
+        await database.execute(update_query)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update the password: {str(e)}")
+
+    # Send temporary password via email
+    try:
+        msg = MIMEText(f'Your temporary password is: "{temp_password}"')
+        msg['Subject'] = 'Temporary Password'
+        msg['From'] = MAIN_EMAIL
+        msg['To'] = email
+
+        with smtplib.SMTP('smtp.gmail.com', 587) as server:
+            server.starttls()
+            server.login(MAIN_EMAIL, MAIN_EMAIL_PASSWORD)
+            server.sendmail(MAIN_EMAIL, email, msg.as_string())
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to send temporary password email.")
+
+    return {"status": "success", "message": "Temporary password sent to your email."}

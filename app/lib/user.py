@@ -1,5 +1,7 @@
 # app/lib/user.py
 
+import random
+import string
 from fastapi import HTTPException, status
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
@@ -155,3 +157,24 @@ def is_valid_password(password: str):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Password must contain at least one number",
         )
+
+
+def generate_valid_password(length=8):
+    # ASCII lowercase + digits
+    if length < 8:
+        raise ValueError("Password length must be at least 8 characters")
+    
+    lowercase = string.ascii_lowercase
+    digits = string.digits
+
+    password = [
+        random.choice(lowercase),
+        random.choice(digits)
+    ]
+
+    all_valid_characters = lowercase + digits
+    password += random.choices(all_valid_characters, k=length - len(password))
+
+    random.shuffle(password)
+
+    return ''.join(password)
