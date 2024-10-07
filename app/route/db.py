@@ -221,10 +221,6 @@ async def refer_daily_transaction(
         (Transaction.t_date <= end_date_obj)
     ).order_by(Transaction.t_date)
     transactions = await database.fetch_all(query)
-
-    if not transactions:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No transactions found for the given criteria.")
-
     return {"message": transactions}
 
 # API to upload transaction data (with optional image)
