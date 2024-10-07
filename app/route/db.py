@@ -65,6 +65,12 @@ async def get_user_branches(request: Request):
     query = Branch.__table__.select().where(Branch.uid == int(uid))
     branches = await database.fetch_all(query)
     
+    # If no branches are found, create Home Branch
+    if not branches:
+        query = Branch.__table__.insert().values(uid=uid, path='Home').returning(Branch.__table__.c.bid)
+        bid = await database.execute(query)
+        path = 'Home'
+        return {"message": [{bid, path, uid}]}
     if not branches:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No branches found for this user.")
     
@@ -180,7 +186,7 @@ async def refer_daily_transaction(
     request: Request,
     begin_date: str = Query(...),
     end_date: str = Query(...),
-    branch: str = Query(...),
+    branch: str = Query(...)
 ):
     # Extract access token from cookies
     try:
@@ -318,13 +324,14 @@ async def get_receipt(request: Request, tid: int = Query(...)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found.")
 
     # Check if receipt path exists
-    receipt_path = transaction.receipt
+    file_name = transaction.receipt
 
-    if not receipt_path:
+    if not file_name:
         return {"receipt": None}
 
     # Generate file path for the image
-    file_path = os.path.join(UPLOAD_DIRECTORY, os.path.basename(receipt_path))
+    dir_path = UPLOAD_DIRECTORY + str(uid)
+    file_path = os.path.join(dir_path, file_name)
 
     # If the file does not exist
     if not os.path.exists(file_path):
@@ -374,15 +381,18 @@ async def get_receipt_multiple(
     zip_buffer = BytesIO()
     with zipfile.ZipFile(zip_buffer, "w") as zip_file:
         for transaction in transactions:
-            receipt_path = transaction.receipt
+            file_name = transaction.receipt
 
             # Skip if no image is present
-            if not receipt_path:
+            if not file_name:
                 continue
 
             # Generate file path for the image
             tid = transaction.tid
-            file_path = os.path.join(UPLOAD_DIRECTORY, os.path.basename(receipt_path))
+
+            dir_path = UPLOAD_DIRECTORY + str(uid)
+            file_path = os.path.join(dir_path, file_name)
+            # file_path = os.path.join(UPLOAD_DIRECTORY, os.path.basename(receipt_path))
 
             # Skip if the file does not exist
             if not os.path.exists(file_path):
@@ -457,7 +467,10 @@ async def modify_transaction(
     # Update image file if provided
     if receipt:
         if transaction.receipt:
-            await delete_image(transaction.receipt)
+            file_name = transaction.receipt
+            file_path = os.path.join(UPLOAD_DIRECTORY + str(uid), file_name)
+            await delete_image(file_path)
+
         try:
             receipt_path = await save_image(receipt, uid)
             update_data['receipt'] = receipt_path
@@ -503,6 +516,7 @@ async def delete_transaction(
     # Check if the transaction exists for the given tid and uid
     query = Transaction.__table__.select().where((Transaction.tid == tid) & (Transaction.uid == uid))
     transaction = await database.fetch_one(query)
+
     if not transaction:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found.")
 

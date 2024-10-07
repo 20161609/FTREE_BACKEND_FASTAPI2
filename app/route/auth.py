@@ -130,14 +130,16 @@ async def signup(data: dict = Body(...)):
     user = await database.fetch_one(Auth.__table__.select().where(Auth.email == email))
     uid = user['uid']
 
-    query = Branch.__table__.insert().values(
-        uid=uid,
-        path='Home'
-    )
+    query = Branch.__table__.insert().values(uid=uid, path='Home')
     await database.execute(query)
 
     query = EmailVerification.__table__.delete().where(EmailVerification.email == email)
     await database.execute(query)
+
+    # Create UPLOAD_DIRECTORY + '/' + str(uid) directory
+    user_directory = os.path.join(UPLOAD_DIRECTORY, str(uid))
+    if not os.path.exists(user_directory):
+        os.makedirs(user_directory)
 
     return {"message": "Signup successful."}
 
@@ -276,16 +278,22 @@ async def delete_account(request: Request):
     except Exception:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication failed")
 
+    # Delete user token from Token table
+    try:
+        delete_token_query = Token.__table__.delete().where(Token.uid == uid)
+        await database.execute(delete_token_query)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to delete user token: {str(e)}")
+
     # Delete user-related transactions and images
     try:
-        transaction_query = Transaction.__table__.select().where(Transaction.uid == uid)
-        transactions = await database.fetch_all(transaction_query)
-        
-        for transaction in transactions:
-            if transaction["receipt"]:
-                receipt_path = os.path.join(UPLOAD_DIRECTORY, transaction["receipt"])
-                if os.path.exists(receipt_path):
-                    os.remove(receipt_path)
+        dir_path = os.path.join(UPLOAD_DIRECTORY, str(uid))
+        if os.path.exists(dir_path):
+            for file in os.listdir(dir_path):
+                file_path = os.path.join(dir_path, file)
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+            os.rmdir(dir_path)
         
         delete_transactions_query = Transaction.__table__.delete().where(Transaction.uid == uid)
         await database.execute(delete_transactions_query)
@@ -422,8 +430,6 @@ async def forget_password(data: dict = Body(...)):
     # Generate temporary password
     temp_password = generate_valid_password(8)
     hashed_password = hash_password(temp_password)
-    print('temp_password', temp_password)
-    print('hashed_password', hashed_password)
 
     # Update the password in the Auth table
     try:

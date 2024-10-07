@@ -22,8 +22,14 @@ async def execute_del_tr(uid: str, tid_list: list):
         
         delete_data = await database.fetch_all(delete_query)
         for data in delete_data:
-            if data['receipt']:
-                os.remove(data['receipt'])
+            file_name = data['receipt']
+            if not file_name:
+                continue
+
+            file_path = os.path.join(UPLOAD_DIRECTORY, str(uid), file_name)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+
     except Exception as e:
         print("Failed to delete transaction from PostgreSQL\n" + str(e))
 
@@ -37,7 +43,8 @@ async def save_image(file: UploadFile, uid: str) -> str:
     
     # Generate a unique file name using UUID
     file_name = f"{uuid4()}{file_extension}"
-    file_path = os.path.join(UPLOAD_DIRECTORY, file_name)
+    dir_path = UPLOAD_DIRECTORY + str(uid)
+    file_path = os.path.join(dir_path, file_name)
 
     # Create the directory if it doesn't exist
     os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
@@ -46,7 +53,7 @@ async def save_image(file: UploadFile, uid: str) -> str:
     with open(file_path, "wb") as buffer:
         buffer.write(await file.read())
 
-    return file_path  # This path should be stored in the database
+    return file_name  # This path should be stored in the database
 
 # Delete the image file from the server
 async def delete_image(file_path: str):
