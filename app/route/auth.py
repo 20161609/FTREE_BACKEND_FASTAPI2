@@ -1,11 +1,12 @@
 # app/route/auth.py
 
+from typing import Optional
 from app.db.model import Branch, Transaction
 from app.db.model import Auth, EmailVerification, Token
-from app.lib.user import refresh_access_token, create_refresh_token, decode_access_token, hash_password, verify_password, create_access_token
+from app.lib.user import refresh_access_token, create_refresh_token, decode_access_token, hash_password, verify_password, create_access_token, is_valid_password
 from app.db.init import database
 from datetime import datetime, timedelta
-from fastapi import Response, APIRouter, Body, HTTPException, Query, status, Request, Response
+from fastapi import Form, Response, APIRouter, Body, HTTPException, Query, status, Request, Response
 from fastapi.security import OAuth2PasswordBearer
 from email.mime.text import MIMEText
 import secrets
@@ -335,3 +336,75 @@ async def signout(request: Request, response: Response):
     response.delete_cookie(key="refresh_token", path="/", domain="localhost")
 
     return {"status": "success", "message": "You have been signed out successfully."}
+
+# Modify Password API
+@router.put("/modify-password/")
+async def modify_password(
+    request: Request, 
+    password: Optional[str] = Form(None)):
+
+    # Extract access token from cookies
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token not found. Please log in.")
+
+    # Decode access token to get user ID
+    try:
+        uid = decode_access_token(access_token)
+    except HTTPException as e:
+        raise HTTPException(status_code=e.status_code, detail=f"Error in token decoding: {e.detail}")
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to decode the access token.")
+
+    # Extract password from request body
+    try:
+        is_valid_password(password)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    if not password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Password is required.")
+
+    # Hash the new password
+    hashed_password = hash_password(password)
+
+    # Update the password in the Auth table
+    try:
+        update_query = Auth.__table__.update().where(Auth.uid == uid).values(password=hashed_password)
+        await database.execute(update_query)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update the password: {str(e)}")
+
+    return {"status": "success", "message": "Password updated successfully."}
+
+# Update User Info
+@router.put("/update-userinfo/")
+async def update_user(
+    request: Request, 
+    username: Optional[str] = Form(None),
+    useai: Optional[bool] = Form(None)):
+    # Extract access token from cookies
+    access_token = request.cookies.get("access_token")
+
+    if not access_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token not found. Please log in.")
+    
+    # Decode access token to get user ID
+    try:
+        uid = decode_access_token(access_token)
+    except HTTPException as e:
+        raise HTTPException(status_code=e.status_code, detail=f"Error in token decoding: {e.detail}")
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to decode the access token.")
+    
+    # Update user information
+    try:
+        update_query = Auth.__table__.update().where(Auth.uid == uid).values(
+            username=username,
+            useai=useai
+        )
+        await database.execute(update_query)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update user information: {str(e)}")
+    
+    return {"status": "success", "message": "User information updated successfully."}

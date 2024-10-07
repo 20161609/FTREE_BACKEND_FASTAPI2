@@ -34,6 +34,7 @@ class Auth(Base):
     is_active = Column(Boolean, default=True)  # User active status
     create_time = Column(TIMESTAMP, default=datetime.utcnow)  # Account creation time
     update_time = Column(TIMESTAMP, default=datetime.utcnow)  # Last update time
+    useai = Column(Boolean, default=False)  # Use AI for transaction categorization
 
 # Branch model for organizing branches
 class Branch(Base):

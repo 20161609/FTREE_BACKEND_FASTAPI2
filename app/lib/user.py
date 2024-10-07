@@ -117,3 +117,41 @@ def refresh_access_token(refresh_token: str):
     uid = decode_refresh_token(refresh_token)
     access_token = create_access_token(data={"sub": uid})
     return access_token
+
+# Is Valid Password?
+def is_valid_password(password: str):
+    """Checks if the password meets the minimum requirements."""
+    # Condition1. Password must be at least 8 characters long
+    condition1 = len(password) >= 8
+    if not condition1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 8 characters long",
+        )
+    
+    # Condition 2. Password must contain at least one lowercase letter
+    condition2 = any(char.islower() for char in password)
+    if not condition2:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must contain at least one lowercase letter",
+        )
+    
+    # Condition 3. Special Symbol Check -> !@#$%^&*()-+ (Valid Symbols)
+    # Any sympol other than the valid symbols will raise an error
+    # But Digit and Alphabet are allowed
+    valid_simbols = "!@#$%^&*-+"
+    condition3 = all(char.isalnum() or char in valid_simbols for char in password)
+    if not condition3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must contain only valid special symbols: !@#$%^&*-+",
+        )
+
+    # Condition4. Password must contain at least one number
+    condition4 = any(char.isdigit() for char in password)
+    if not condition4:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must contain at least one number",
+        )
