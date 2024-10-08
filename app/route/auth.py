@@ -109,6 +109,11 @@ async def signup(data: dict = Body(...)):
     if not email or not password or not username:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email, password, and username are required.")
     
+    try:
+        is_valid_password(password)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
     user = await database.fetch_one(Auth.__table__.select().where(Auth.email == email))
     if user:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already in use.")

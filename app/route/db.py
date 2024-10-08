@@ -160,7 +160,7 @@ async def delete_branch(
 
     # Retrieve list of bids to be deleted
     query = Branch.__table__.select().where(Branch.uid == uid).where(
-        or_(Branch.path == branch, Branch.path.like(f'{branch + '/'}%'))
+        or_(Branch.path == branch, Branch.path.like(f"{branch + '/'}%"))
     )
     temp = await database.fetch_all(query)
     branch_list = [x['path'] for x in temp]
@@ -222,7 +222,7 @@ async def refer_daily_transaction(
     # Retrieve transactions within the specified date range and branch
     query = Transaction.__table__.select().where(
         (Transaction.uid == uid) &
-        (or_(Transaction.branch == branch, Transaction.branch.like(f'{branch + '/'}%'))) &
+        (or_(Transaction.branch == branch, Transaction.branch.like(f"{branch + '/'}%"))) &
         (Transaction.t_date >= begin_date_obj) &
         (Transaction.t_date <= end_date_obj)
     ).order_by(Transaction.t_date)

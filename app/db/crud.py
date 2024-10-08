@@ -113,7 +113,7 @@ async def get_daily_postgre(uid: str, branch: str, begin_date: str, end_date: st
 
     query = Transaction.__table__.select().where(
         (Transaction.uid == uid) &
-        (or_(Transaction.branch == branch, Transaction.branch.like(f'{branch + '/'}%'))) &
+        (or_(Transaction.branch == branch, Transaction.branch.like(f"{branch + '/'}%"))) &
         (Transaction.t_date.between(begin_date, end_date))
     ).order_by(Transaction.t_date)
 
