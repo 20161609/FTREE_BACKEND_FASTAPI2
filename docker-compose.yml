@@ -10,8 +10,7 @@ services:
     depends_on:
       - db
     environment:
-      - "DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
-      - UPLOAD_DIRECTORY=/app/uploads
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
     env_file:
       - .env
     networks:

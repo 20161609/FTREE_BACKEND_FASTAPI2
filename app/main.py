@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.db.init import database
 from app.route import auth, db
 from fastapi.staticfiles import StaticFiles
+from app.firebase.init import initialize_firebase
 import os
 from dotenv import load_dotenv
 
@@ -12,14 +13,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 FRONT_URL = os.getenv("FRONT_URL")
-UPLOAD_DIRECTORY= os.getenv("UPLOAD_DIRECTORY")
 # Create FastAPI instance
 app = FastAPI()
 
-# Set up uploads directory for image storage
-# This code will be deleted when it should be released to production 
-if not os.path.exists(UPLOAD_DIRECTORY):
-    os.makedirs(UPLOAD_DIRECTORY)
 
 # CORS configuration to allow the specified frontend URL
 app.add_middleware(
@@ -42,8 +38,8 @@ async def shutdown():
     print("Disconnecting from the database")
     await database.disconnect()
 
-# Serve files from the "uploads" directory
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIRECTORY), name="uploads")
+# Initialize Firebase
+initialize_firebase()
 
 # Register routes
 app.include_router(db.router, prefix="/db")

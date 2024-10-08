@@ -3,6 +3,7 @@
 from typing import Optional
 from app.db.model import Branch, Transaction
 from app.db.model import Auth, EmailVerification, Token
+from app.firebase.storage import delete_directory
 from app.lib.user import generate_valid_password, refresh_access_token, create_refresh_token, decode_access_token, hash_password, verify_password, create_access_token, is_valid_password
 from app.db.init import database
 from datetime import datetime, timedelta
@@ -22,7 +23,6 @@ load_dotenv()
 # Directory where images are stored on the server
 MAIN_EMAIL = os.getenv("MAIN_EMAIL")
 MAIN_EMAIL_PASSWORD = os.getenv("MAIN_EMAIL_PASSWORD")
-UPLOAD_DIRECTORY = os.getenv("UPLOAD_DIRECTORY")
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="signin")
@@ -140,11 +140,6 @@ async def signup(data: dict = Body(...)):
 
     query = EmailVerification.__table__.delete().where(EmailVerification.email == email)
     await database.execute(query)
-
-    # Create UPLOAD_DIRECTORY + '/' + str(uid) directory
-    user_directory = os.path.join(UPLOAD_DIRECTORY, str(uid))
-    if not os.path.exists(user_directory):
-        os.makedirs(user_directory)
 
     return {"message": "Signup successful."}
 
@@ -292,18 +287,16 @@ async def delete_account(request: Request):
 
     # Delete user-related transactions and images
     try:
-        dir_path = os.path.join(UPLOAD_DIRECTORY, str(uid))
-        if os.path.exists(dir_path):
-            for file in os.listdir(dir_path):
-                file_path = os.path.join(dir_path, file)
-                if os.path.isfile(file_path):
-                    os.remove(file_path)
-            os.rmdir(dir_path)
-        
         delete_transactions_query = Transaction.__table__.delete().where(Transaction.uid == uid)
         await database.execute(delete_transactions_query)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to delete user transactions: {str(e)}")
+
+    # Delete 'uid' Directory from firebase storage
+    try:
+        await delete_directory(uid)
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to delete user images: {str(e)}")
 
     # Delete user-related branches
     try:

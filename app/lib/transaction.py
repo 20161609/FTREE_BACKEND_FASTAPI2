@@ -9,11 +9,12 @@ from app.db.model import Transaction
 from dotenv import load_dotenv
 import os
 
+from app.firebase.storage import delete_image
+
 load_dotenv()
-UPLOAD_DIRECTORY = os.getenv("UPLOAD_DIRECTORY")
 
 # Delete transactions and associated receipt images
-async def execute_del_tr(uid: str, tid_list: list):
+async def execute_del_transaction(uid: str, tid_list: list):
     try:
         delete_query = Transaction.__table__.delete().where(
             (Transaction.uid == uid) & 
@@ -26,9 +27,9 @@ async def execute_del_tr(uid: str, tid_list: list):
             if not file_name:
                 continue
 
-            file_path = os.path.join(UPLOAD_DIRECTORY, str(uid), file_name)
-            if os.path.exists(file_path):
-                os.remove(file_path)
+            file_path = f'{uid}/{file_name}'
+            await delete_image(uid, file_name)
+            continue
 
     except Exception as e:
         print("Failed to delete transaction from PostgreSQL\n" + str(e))
@@ -39,9 +40,10 @@ async def save_image(file: UploadFile, uid: str) -> str:
     file_extension = Path(file.filename).suffix
     
     if file_extension not in [".jpg", ".jpeg", ".png"]:
-        raise HTTPException(status_code=400, detail="Unsupported file format.")
+        msg = "Unsupported file format. Please upload a JPG or PNG file."
+        raise HTTPException(status_code=400, detail=msg)
     
-    # Generate a unique file name using UUID
+    # Generate a unique file name using UU  ID
     file_name = f"{uuid4()}{file_extension}"
     dir_path = UPLOAD_DIRECTORY + str(uid)
     file_path = os.path.join(dir_path, file_name)
@@ -54,11 +56,3 @@ async def save_image(file: UploadFile, uid: str) -> str:
         buffer.write(await file.read())
 
     return file_name  # This path should be stored in the database
-
-# Delete the image file from the server
-async def delete_image(file_path: str):
-    if os.path.exists(file_path):
-        os.remove(file_path)
-        return {"status": True, "message": "Image deleted successfully."}
-
-    return {"status": False, "message": "Image not found."}

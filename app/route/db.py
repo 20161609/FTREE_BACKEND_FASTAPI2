@@ -1,5 +1,6 @@
 # app/route/db.py
 
+import io
 import os
 import zipfile
 from io import BytesIO
@@ -11,10 +12,11 @@ from jose import ExpiredSignatureError
 from fastapi import APIRouter, Depends, HTTPException, Request, Form, File, UploadFile, Query, Body, status
 from fastapi.responses import StreamingResponse, FileResponse
 from fastapi.security import OAuth2PasswordBearer
+from app.firebase.storage import save_image, get_image, get_image_url, delete_image
 from sqlalchemy.orm import Session
 
 from app.lib.branch import delete_branch_bid
-from app.lib.transaction import delete_image, execute_del_tr, save_image
+from app.lib.transaction import execute_del_transaction
 from app.lib.user import refresh_access_token, decode_access_token
 from app.db.crud import is_exist_branch
 from app.db.model import Transaction, Branch
@@ -173,7 +175,7 @@ async def delete_branch(
     tid_list = [x['tid'] for x in temp]
     
     # Delete transactions
-    await execute_del_tr(uid, tid_list)
+    await execute_del_transaction(uid, tid_list)
 
     # Delete branches
     await delete_branch_bid(uid, bid_list)
@@ -273,9 +275,10 @@ async def upload_transaction(
     receipt_path = None
     if receipt:
         try:
-            receipt_path = await save_image(receipt, uid)
+            receipt_path = await save_image(uid, receipt)
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to save the image.")
+            receipt_path = None
+            # raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to save the image.")
 
     # Insert new transaction
     query = Transaction.__table__.insert().values(
@@ -328,17 +331,8 @@ async def get_receipt(request: Request, tid: int = Query(...)):
 
     if not file_name:
         return {"receipt": None}
-
-    # Generate file path for the image
-    dir_path = UPLOAD_DIRECTORY + str(uid)
-    file_path = os.path.join(dir_path, file_name)
-
-    # If the file does not exist
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Image file not found.")
-
-    # Return the image file response
-    return FileResponse(file_path)
+    image_path = await get_image_url(uid, file_name)
+    return image_path
 
 # API to return multiple images compressed into a ZIP
 @router.get("/get-receipt-multiple/")
@@ -347,67 +341,64 @@ async def get_receipt_multiple(
     tid_list: List[int] = Query(...),
 ):
     # Extract access token from cookies
-    try:
-        access_token = request.cookies.get("access_token")
-        if not access_token:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token not found in cookies.")
-    except ExpiredSignatureError:
-        refresh_token = request.cookies.get("refresh_token")
-        if not refresh_token:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token expired. Refresh token not found in cookies.")
-        new_access_token = await refresh_access_token(refresh_token)
-        access_token = new_access_token
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve access token.")
+    access_token = request.cookies.get("access_token")
+    if not access_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Access token not found in cookies.",
+        )
 
     # Extract uid from access token
     try:
         uid = decode_access_token(access_token)
-    except ExpiredSignatureError:
+    except Exception:
+        # If token is expired or invalid, try refreshing it
         refresh_token = request.cookies.get("refresh_token")
         if not refresh_token:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token expired. Refresh token not found in cookies.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Access token expired or invalid. Refresh token not found in cookies.",
+            )
         new_access_token = await refresh_access_token(refresh_token)
         uid = decode_access_token(new_access_token)
 
     # Retrieve transactions for tid_list and uid
-    query = Transaction.__table__.select().where(Transaction.tid.in_(tid_list)).where(Transaction.uid == uid)
+    query = (
+        Transaction.__table__.select()
+        .where(Transaction.tid.in_(tid_list))
+        .where(Transaction.uid == uid)
+    )
     transactions = await database.fetch_all(query)
 
     if not transactions:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transactions not found.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Transactions not found."
+        )
 
-    # Create a ZIP file in memory
-    zip_buffer = BytesIO()
-    with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-        for transaction in transactions:
-            file_name = transaction.receipt
+    # Create a mapping of tid to image URLs
+    image_urls = {}
+    for transaction in transactions:
+        file_name = transaction.receipt
 
-            # Skip if no image is present
-            if not file_name:
-                continue
+        # Skip if no image is present
+        if not file_name:
+            continue
 
-            # Generate file path for the image
-            tid = transaction.tid
+        # Get the public URL of the image from Firebase Storage
+        try:
+            # bucket = storage.bucket()
+            # blob = bucket.blob(f"{uid}/{file_name}")
+            # blob.make_public()
+            # image_url = blob.public_url
+            # image_url = await get_image(uid, file_name)
+            image_url = await get_image(uid, file_name)
+            if image_url:
+                image_urls[transaction.tid] = image_url
+        except Exception as e:
+            print(f"Failed to get image from Firebase Storage\n{str(e)}")
+            continue
 
-            dir_path = UPLOAD_DIRECTORY + str(uid)
-            file_path = os.path.join(dir_path, file_name)
-            # file_path = os.path.join(UPLOAD_DIRECTORY, os.path.basename(receipt_path))
-
-            # Skip if the file does not exist
-            if not os.path.exists(file_path):
-                continue
-
-            # Read the file and add it to the ZIP
-            with open(file_path, "rb") as f:
-                # Save the file as tid_filename.jpg
-                zip_file.writestr(f"{tid}_{os.path.basename(file_path)}", f.read())
-
-    # Return the ZIP file
-    zip_buffer.seek(0)
-    return StreamingResponse(zip_buffer, media_type="application/x-zip-compressed", headers={
-        "Content-Disposition": "attachment; filename=receipts.zip"
-    })
+    return image_urls
 
 # API to modify a transaction
 @router.put("/modify-transaction/")
@@ -467,15 +458,17 @@ async def modify_transaction(
     # Update image file if provided
     if receipt:
         if transaction.receipt:
-            file_name = transaction.receipt
-            file_path = os.path.join(UPLOAD_DIRECTORY + str(uid), file_name)
-            await delete_image(file_path)
-
+            try:
+                await delete_image(uid, transaction.receipt)
+            except Exception as e:
+                print("error deleting image", e)
+                pass
         try:
-            receipt_path = await save_image(receipt, uid)
+            receipt_path = await save_image(uid, receipt)
             update_data['receipt'] = receipt_path
         except Exception as e:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to save the image.")
+
 
     # Update the database
     query = Transaction.__table__.update().where(Transaction.tid == tid).values(**update_data)
@@ -521,5 +514,5 @@ async def delete_transaction(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found.")
 
     tid = transaction.tid
-    await execute_del_tr(uid, [tid])
+    await execute_del_transaction(uid, [tid])
     return {"message": "Transaction successfully deleted."}
