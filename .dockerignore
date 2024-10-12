@@ -25,3 +25,5 @@ Dockerfile
 
 # Environment variables
 .env
+
+# dockerignore file

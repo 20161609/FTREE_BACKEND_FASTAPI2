@@ -13,9 +13,9 @@ class Transaction(Base):
     cashflow = Column(Integer, nullable=False)  # Cashflow amount
     description = Column(Text, nullable=True)  # Optional description
     c_date = Column(TIMESTAMP, default=datetime.utcnow)  # Creation timestamp
-    uid = Column(String(255), ForeignKey('auth.uid'), nullable=False)  # Foreign key to user ID
-    receipt = Column(LargeBinary, nullable=True)  # Optional receipt image as binary data
-
+    uid = Column(Integer, ForeignKey('auth.uid'), nullable=False)  # Foreign key to user ID
+    receipt = Column(String(255), nullable=True)  # Receipt image directory path in Firebase Storage
+    
 # Email verification model
 class EmailVerification(Base):
     __tablename__ = 'email_verification'
@@ -40,7 +40,7 @@ class Auth(Base):
 class Branch(Base):
     __tablename__ = 'branch'
     bid = Column(Integer, primary_key=True, autoincrement=True)  # Branch ID
-    uid = Column(String(255), ForeignKey('auth.uid'), nullable=False)  # Foreign key to user ID
+    uid = Column(Integer, ForeignKey('auth.uid'), nullable=False)  # Foreign key to user ID
     path = Column(String(255), nullable=False)  # Path for branch (e.g., directory structure)
 
 # Role model for user roles (e.g., admin, user)

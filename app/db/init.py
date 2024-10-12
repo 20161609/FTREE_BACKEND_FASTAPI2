@@ -19,7 +19,7 @@ metadata = MetaData()
 Base = declarative_base()
 
 # Create a Database object for async operations
-database = Database(DATABASE_URL, ssl=False)
+database = Database(DATABASE_URL, ssl=True)
 
 # SQLAlchemy session setup for synchronous database interactions
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -19,3 +19,5 @@ __pycache__/
 *.bmp
 *.ico
 *.svg
+
+# gitignore file

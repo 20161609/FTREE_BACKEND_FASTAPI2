@@ -4,7 +4,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.init import database
 from app.route import auth, db
-from fastapi.staticfiles import StaticFiles
+from app.route import test
+from app.firebase.init import initialize_firebase
 import os
 from dotenv import load_dotenv
 
@@ -12,23 +13,25 @@ from dotenv import load_dotenv
 load_dotenv()
 
 FRONT_URL = os.getenv("FRONT_URL")
-UPLOAD_DIRECTORY= os.getenv("UPLOAD_DIRECTORY")
+BACK_URL = os.getenv("BACK_URL")
+
 # Create FastAPI instance
 app = FastAPI()
-
-# Set up uploads directory for image storage
-# This code will be deleted when it should be released to production 
-if not os.path.exists(UPLOAD_DIRECTORY):
-    os.makedirs(UPLOAD_DIRECTORY)
 
 # CORS configuration to allow the specified frontend URL
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[FRONT_URL],  # Specify client domain
+    allow_origins=[
+        FRONT_URL,
+        BACK_URL
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+# Initialize Firebase
+initialize_firebase()
 
 # Connect to the database on startup
 @app.on_event("startup")
@@ -36,19 +39,17 @@ async def startup():
     print("Connecting to the database")
     await database.connect()
 
-# Disconnect from the database on shutdown
+# # # Disconnect from the database on shutdown
 @app.on_event("shutdown")
 async def shutdown():
     print("Disconnecting from the database")
     await database.disconnect()
 
-# Serve files from the "uploads" directory
-app.mount("/uploads", StaticFiles(directory=UPLOAD_DIRECTORY), name="uploads")
-
 # Register routes
 app.include_router(db.router, prefix="/db")
 app.include_router(auth.router, prefix="/auth")
+app.include_router(test.router, prefix="/test")
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to my FastAPI project (New version). Updated for JWT!"}
+    return {"message": "Hello World - 27"}

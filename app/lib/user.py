@@ -158,7 +158,7 @@ def is_valid_password(password: str):
             detail="Password must contain at least one number",
         )
 
-
+# Generate a valid password
 def generate_valid_password(length=8):
     # ASCII lowercase + digits
     if length < 8:

@@ -1,15 +1,20 @@
-# Python 3.12.2로 변경
+# Use image python:3.12.2-slim
 FROM python:3.12.2-slim
 
+# Setting Work Directory
 WORKDIR /app
 
-# requirements.txt 파일을 컨테이너의 /app 디렉토리로 복사
-COPY requirements.txt /app
-
-# 필요한 패키지를 설치
+# Copy requirements.txt file to container and install required packages
+COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 현재 디렉토리의 나머지 파일들을 컨테이너의 /app 디렉토리로 복사
+# Copy all other application files to work directory
 COPY . /app
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Expose port 80
+EXPOSE 80
+
+# Start the application
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
+
+# Dockerfile
