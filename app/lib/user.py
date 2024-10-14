@@ -1,8 +1,10 @@
 # app/lib/user.py
 
+import base64
+import hashlib
 import random
 import string
-from fastapi import HTTPException, status
+from fastapi import HTTPException, requests, status
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import ExpiredSignatureError, JWTError, jwt
@@ -14,6 +16,7 @@ load_dotenv()
 
 # JWT configuration
 JWT_KEY = os.getenv('JWT_KEY')  # Secret key, managed via .env in production
+SALT = os.getenv('SALT')  # Salt for hashing
 ALGORITHM = "HS256"  # JWT signing algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = 60  # Token expiration time (60 minutes)
 
@@ -178,3 +181,12 @@ def generate_valid_password(length=8):
     random.shuffle(password)
 
     return ''.join(password)
+
+PERMISSION_URL = "https://permission-generator-app-bvemfndnc0byevf3.canadacentral-01.azurewebsites.net"
+
+async def get_permission_code(verifyCode: str):
+    salted_data = verifyCode + SALT
+    hash_object = hashlib.sha256(salted_data.encode())
+    base64_encoded = base64.urlsafe_b64encode(hash_object.digest()).decode()[:6]
+
+    return base64_encoded

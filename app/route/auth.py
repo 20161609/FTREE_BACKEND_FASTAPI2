@@ -4,7 +4,7 @@ from typing import Optional
 from app.db.model import Branch, Transaction
 from app.db.model import Auth, EmailVerification, Token
 from app.firebase.storage import delete_directory
-from app.lib.user import generate_valid_password, refresh_access_token, create_refresh_token, decode_access_token, hash_password, verify_password, create_access_token, is_valid_password
+from app.lib.user import generate_valid_password, get_permission_code, refresh_access_token, create_refresh_token, decode_access_token, hash_password, verify_password, create_access_token, is_valid_password
 from app.db.init import database
 from datetime import datetime, timedelta
 from fastapi import Form, Response, APIRouter, Body, HTTPException, Query, logger, status, Request, Response
@@ -44,16 +44,17 @@ async def verify_email(data: dict = Body(...)):
 
     # Generate verification code
     code = secrets.token_hex(3)
+    permissionCode = await get_permission_code(code)
     current_time = datetime.utcnow()
 
     # Insert or update code and timestamp in EmailVerification table
     query = insert(EmailVerification).values(
-        code=code,
+        code=permissionCode,
         email=email,
         created_at=current_time
     ).on_conflict_do_update(
         index_elements=['email'],
-        set_={'code': code, 'created_at': current_time}
+        set_={'code': permissionCode, 'created_at': current_time}
     )
 
     await database.execute(query)
@@ -237,6 +238,11 @@ async def get_user(request: Request):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Access token expired. Refresh token not found in cookies.")
         new_access_token = await refresh_access_token(refresh_token)
         uid = decode_access_token(new_access_token)
+
+    token_query = Token.__table__.select().where(Token.uid == uid)
+    token_res = await database.fetch_one(token_query)
+    if not token_res:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Recently Signed Out. Please Sign In Again.")
 
     try:
         query = Auth.__table__.select().where(Auth.uid == uid)
