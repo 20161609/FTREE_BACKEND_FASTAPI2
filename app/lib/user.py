@@ -182,8 +182,6 @@ def generate_valid_password(length=8):
 
     return ''.join(password)
 
-PERMISSION_URL = "https://permission-generator-app-bvemfndnc0byevf3.canadacentral-01.azurewebsites.net"
-
 async def get_permission_code(verifyCode: str):
     salted_data = verifyCode + SALT
     hash_object = hashlib.sha256(salted_data.encode())
