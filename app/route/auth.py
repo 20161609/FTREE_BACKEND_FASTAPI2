@@ -8,6 +8,7 @@ from app.lib.user import generate_valid_password, get_permission_code, refresh_a
 from app.db.init import database
 from datetime import datetime, timedelta
 from fastapi import Form, Response, APIRouter, Body, HTTPException, Query, logger, status, Request, Response
+from fastapi import Cookie
 from fastapi.security import OAuth2PasswordBearer
 from email.mime.text import MIMEText
 import secrets
@@ -23,8 +24,8 @@ load_dotenv()
 # Directory where images are stored on the server
 MAIN_EMAIL = os.getenv("MAIN_EMAIL")
 MAIN_EMAIL_PASSWORD = os.getenv("MAIN_EMAIL_PASSWORD")
-AZURE_DOMAIN = "ftree-app-g9f2acaraya3dpay.canadacentral-01.azurewebsites.net"
 AZURE_DOMAIN = os.getenv("AZURE_DOMAIN")
+FRONT_DOMAIN = ''# os.getenv("FRONT_DOMAIN")
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="signin")
@@ -61,7 +62,8 @@ async def verify_email(data: dict = Body(...)):
 
     # Send verification email
     try:
-        msg = MIMEText(f'Your verification code is: {code}')
+        mimeText = f'Your verification code is: {code}\nThat code should be hashed in Permission Site'
+        msg = MIMEText(mimeText)
         msg['Subject'] = 'Verification Code'
         msg['From'] = MAIN_EMAIL
         msg['To'] = email
@@ -148,7 +150,7 @@ async def signup(data: dict = Body(...)):
 
 # Signin API
 @router.post("/signin/")
-async def signin(response: Response, data: dict = Body(...)):
+async def signin(request: Request, response: Response, data: dict = Body(...)):
     email = data.get('email')
     password = data.get('password')
 
@@ -184,34 +186,41 @@ async def signin(response: Response, data: dict = Body(...)):
         )
     await database.execute(query)
 
+    # is_secure = (request.url.scheme == 'https')
+    is_secure = True # Umm.. Temporary solution - need to be fixed
+    samesite = "None" if is_secure else "Lax"
+
     response.set_cookie(
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=True,  # HTTPS 환경에서 True로 설정
-        samesite="None",
+        secure=is_secure,  # When deploying to HTTPS, set this to True
+        samesite=samesite,
         max_age=7 * 24 * 60 * 60,
         path="/",
         domain=AZURE_DOMAIN
+        # domain="ftree-app-g9f2acaraya3dpay.canadacentral-01.azurewebsites.net"
     )
 
     response.set_cookie(
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=True,  # HTTPS 환경에서 True로 설정
-        samesite="None",
+        secure=is_secure,  # When deploying to HTTPS, set this to True
+        samesite=samesite,
         max_age=60 * 60,
         path="/",
         domain=AZURE_DOMAIN
+        # domain="ftree-app-g9f2acaraya3dpay.canadacentral-01.azurewebsites.net"
     )
+
 
     return {
         'message': {
-            'access_token': access_token,
             'email': user['email'],
-            'username': user['username']
-        }
+            'username': user['username'],
+            'fox': f'{is_secure}, {samesite}'
+        },
     }
 
 # Get user information API

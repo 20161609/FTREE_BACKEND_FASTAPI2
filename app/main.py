@@ -12,7 +12,9 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-FRONT_URL = os.getenv("FRONT_URL")
+FRONT_URL0 = os.getenv("FRONT_URL0")
+FRONT_URL1 = os.getenv("FRONT_URL1")
+FRONT_URL2 = os.getenv("FRONT_URL2")
 BACK_URL = os.getenv("BACK_URL")
 
 # Create FastAPI instance
@@ -22,7 +24,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        FRONT_URL,
+        FRONT_URL0, FRONT_URL1, FRONT_URL2,
         BACK_URL
     ],
     allow_credentials=True,
@@ -52,4 +54,4 @@ app.include_router(test.router, prefix="/test")
 
 @app.get("/")
 async def root():
-    return {"message": "Hello World - 33"}
+    return {"message": "Hello World - 53"}
