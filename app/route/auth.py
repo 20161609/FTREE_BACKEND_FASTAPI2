@@ -187,7 +187,7 @@ async def signin(response: Response, data: dict = Body(...)):
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=True,  # HTTPS 환경에서 True로 설정
+        secure=True,
         samesite="None",
         max_age=7 * 24 * 60 * 60,
         path="/",
@@ -198,7 +198,7 @@ async def signin(response: Response, data: dict = Body(...)):
         key="access_token",
         value=access_token,
         httponly=True,
-        secure=True,  # HTTPS 환경에서 True로 설정
+        secure=True,
         samesite="None",
         max_age=60 * 60,
         path="/",
@@ -391,6 +391,7 @@ async def update_user(
     request: Request, 
     username: Optional[str] = Form(None),
     useai: Optional[bool] = Form(None)):
+
     # Extract access token from cookies
     access_token = request.cookies.get("access_token")
 

@@ -128,10 +128,7 @@ async def create_branch(
 
 # API to delete a branch
 @router.delete('/delete-branch/')
-async def delete_branch(
-    request: Request,
-    branch: str = Query(...)
-):
+async def delete_branch(request: Request, branch: str = Query(...)):
     # Extract access token from cookies
     try:
         access_token = request.cookies.get("access_token")
@@ -457,7 +454,7 @@ async def modify_transaction(
     if description:
         update_data['description'] = description
 
-    # Update image file if provided
+    # Update image file if provided    
     if receipt:
         if transaction.receipt:
             try:
@@ -474,6 +471,8 @@ async def modify_transaction(
 
     # Update the database
     query = Transaction.__table__.update().where(Transaction.tid == tid).values(**update_data)
+
+    # Calculate the Excution time.
     await database.execute(query)
 
     return {"message": "Transaction successfully updated."}
@@ -515,6 +514,12 @@ async def delete_transaction(
     if not transaction:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found.")
 
+    # get tid from the back end program..
+    # transctiontion.
+
+    # All the time, it will be on the side 
     tid = transaction.tid
     await execute_del_transaction(uid, [tid])
+
+    # Return message for transaction succesfully deleted.. 
     return {"message": "Transaction successfully deleted."}

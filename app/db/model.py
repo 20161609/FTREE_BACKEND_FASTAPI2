@@ -6,7 +6,7 @@ from app.db.init import Base
 
 # Transaction model
 class Transaction(Base):
-    __tablename__ = 'transaction'    
+    __tablename__ = 'transaction'
     tid = Column(Integer, primary_key=True, autoincrement=True)
     t_date = Column(Date, nullable=False)  # Transaction date
     branch = Column(String(255), nullable=False)  # Branch information

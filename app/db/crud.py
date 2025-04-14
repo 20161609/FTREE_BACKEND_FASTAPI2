@@ -176,7 +176,7 @@ async def delete_all_branch_postgre(uid: str):
     except Exception as e:
         raise Exception(f"Failed to delete all branches from PostgreSQL: {str(e)}")
 
-# Delete a user by user ID
+# Delete a user by user ID 
 async def delete_user_postgre(uid: str):
     try:
         query = Auth.__table__.delete().where(
