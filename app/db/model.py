@@ -54,7 +54,7 @@ class UserRole(Base):
     __tablename__ = 'user_role'
     user_role_id = Column(Integer, primary_key=True, autoincrement=True)  # UserRole ID
     uid = Column(Integer, ForeignKey('auth.uid'), nullable=False)  # Foreign key to user ID
-    role_id = Column(Integer, ForeignKey('role.role_id'), nullable=False)  # Foreign key to role ID
+    role_id = Column(Integer, ForeignKey('role.role_id'), nullable=False)  # Foreign key to role IDs
 
 # Token model for managing JWT tokens
 class Token(Base):

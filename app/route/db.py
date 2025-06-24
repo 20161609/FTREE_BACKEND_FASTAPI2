@@ -454,7 +454,7 @@ async def modify_transaction(
     if description:
         update_data['description'] = description
 
-    # Update image file if provided    
+    # Update image file if provided
     if receipt:
         if transaction.receipt:
             try:
@@ -482,7 +482,8 @@ async def modify_transaction(
 async def delete_transaction(
     request: Request,
     tid: int = Query(...),
-):
+    ):
+    
     # Extract access token from cookies
     try:
         access_token = request.cookies.get("access_token")

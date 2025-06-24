@@ -1,5 +1,4 @@
 # app/db/crud.py
-
 from datetime import datetime
 from sqlalchemy import select, func, case, and_, or_
 from app.db.model import Auth, Branch, Transaction

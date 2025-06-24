@@ -28,7 +28,6 @@ async def delete_storage_uid(uid: str):
             blob.delete()
             print(f'File {blob.name} deleted')
 
-
 async def save_image(uid: str, receipt: UploadFile) -> str:
     # Extract file extension
     file_extension = Path(receipt.filename).suffix
