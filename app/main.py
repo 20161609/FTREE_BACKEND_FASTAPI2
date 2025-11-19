@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 # from app.db.init import database
-from app.route import auth, db
+# from app.route import auth, db
 from app.route import test
 from app.firebase.init import initialize_firebase
 import os
