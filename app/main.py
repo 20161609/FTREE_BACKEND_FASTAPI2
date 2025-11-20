@@ -28,7 +28,7 @@ app.add_middleware(
 )
 
 # Initialize Firebase
-initialize_firebase()
+# initialize_firebase()
 
 # Connect to the database on startup
 # @app.on_event("startup")
