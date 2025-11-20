@@ -11,10 +11,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy all other application files to work directory
 COPY . /app
 
-# Expose port 80
-EXPOSE 80
+# Expose Cloud Run default port (8080)
+EXPOSE 8080
 
-# Start the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "80"]
-
-# Dockerfile
+# Start the application using Cloud Run PORT env
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port $PORT"]
