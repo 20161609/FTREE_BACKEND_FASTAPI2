@@ -14,5 +14,5 @@ COPY . /app
 # Expose Cloud Run default port (8080)
 EXPOSE 8080
 
-# Start the application using Cloud Run PORT env
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port $PORT"]
+# Start the application on fixed port 8080
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
