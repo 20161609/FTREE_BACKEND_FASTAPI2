@@ -31,16 +31,16 @@ app.add_middleware(
 initialize_firebase()
 
 # Connect to the database on startup
-# @app.on_event("startup")
-# async def startup():
-#     print("Connecting to the database")
-#     await database.connect()
+@app.on_event("startup")
+async def startup():
+    print("Connecting to the database")
+    await database.connect()
 
 # # # Disconnect from the database on shutdown
-# @app.on_event("shutdown")
-# async def shutdown():
-#     print("Disconnecting from the database")
-#     await database.disconnect()
+@app.on_event("shutdown")
+async def shutdown():
+    print("Disconnecting from the database")
+    await database.disconnect()
 
 # Register routes
 # app.include_router(db.router, prefix="/db")
