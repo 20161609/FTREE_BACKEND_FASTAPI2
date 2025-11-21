@@ -43,7 +43,7 @@ async def shutdown():
     await database.disconnect()
 
 # Register routes
-# app.include_router(db.router, prefix="/db")
+app.include_router(db.router, prefix="/db")
 app.include_router(auth.router, prefix="/auth")
 app.include_router(test.router, prefix="/test")
 
