@@ -49,4 +49,4 @@ async def shutdown():
 
 @app.get("/")
 async def root():
-    return {"message": "Version Code - 28"}
+    return {"message": "Version Code - 29"}
