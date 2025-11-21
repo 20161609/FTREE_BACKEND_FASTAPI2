@@ -71,16 +71,15 @@ async def verify_email(data: dict = Body(...)):
         email=email,
         created_at=current_time
     ).on_conflict_do_update(
-        index_elements=["email"],
+        index_elements=['email'],
         set_={"code": code, "created_at": current_time}
     )
 
     await database.execute(query)
 
-    # ❌ 진짜 이메일 전송은 잠깐 OFF
+    # ❌ 여기: 메일 안 보내고 그냥 로그만 찍음
     print(f"[DEBUG] verification code for {email}: {code}")
 
-    # 프론트 개발용: 코드까지 바로 응답으로 돌려줌 (나중에 빼도 됨)
     return {
         "message": "Verification code generated (debug mode).",
         "code": code,
