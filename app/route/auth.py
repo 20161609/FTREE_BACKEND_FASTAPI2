@@ -40,7 +40,6 @@ router = APIRouter()
 async def get_current_uid(token: str = Depends(oauth2_scheme)) -> int:
     return decode_access_token(token)
 
-
 # Send email verification code
 @router.post("/verify-email/")
 async def verify_email(data: dict = Body(...)):
