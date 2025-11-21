@@ -51,7 +51,7 @@ app.include_router(test.router, prefix="/test")
 @app.get("/")
 async def root():
     return {
-        "message": "Version Code - 29",
+        "message": "Version Code - 30",
         "FRONT": FRONT_URL,
         "BACK": BACK_URL
         }
