@@ -29,7 +29,7 @@ ALLOWED_ORIGINS = list({o for o in ALLOWED_ORIGINS if o})
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
+    allow_origins=['*'],
     allow_credentials=False,  # No cookie..
     allow_methods=["*"],
     allow_headers=["*"],
