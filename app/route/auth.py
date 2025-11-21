@@ -46,12 +46,20 @@ async def get_current_uid(token: str = Depends(oauth2_scheme)) -> int:
 async def verify_email(data: dict = Body(...)):
     email = data.get("email")
     if not email:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email is required.")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email is required."
+        )
 
     # Check for duplicate email
-    user = await database.fetch_one(Auth.__table__.select().where(Auth.email == email))
+    user = await database.fetch_one(
+        Auth.__table__.select().where(Auth.email == email)
+    )
     if user:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already in use.")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email is already in use."
+        )
 
     # Generate verification code
     code = secrets.token_hex(3)
@@ -61,32 +69,22 @@ async def verify_email(data: dict = Body(...)):
     query = insert(EmailVerification).values(
         code=code,
         email=email,
-        created_at=current_time,
+        created_at=current_time
     ).on_conflict_do_update(
         index_elements=["email"],
-        set_={"code": code, "created_at": current_time},
+        set_={"code": code, "created_at": current_time}
     )
 
     await database.execute(query)
 
-    # Send verification email
-    try:
-        msg = MIMEText(f"Your verification code is: {code}")
-        msg["Subject"] = "Verification Code"
-        msg["From"] = MAIN_EMAIL
-        msg["To"] = email
+    # ❌ 진짜 이메일 전송은 잠깐 OFF
+    print(f"[DEBUG] verification code for {email}: {code}")
 
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.starttls()
-            server.login(MAIN_EMAIL, MAIN_EMAIL_PASSWORD)
-            server.sendmail(MAIN_EMAIL, email, msg.as_string())
-    except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to send verification email.",
-        )
-
-    return {"message": "Verification code sent."}
+    # 프론트 개발용: 코드까지 바로 응답으로 돌려줌 (나중에 빼도 됨)
+    return {
+        "message": "Verification code generated (debug mode).",
+        "code": code,
+    }
 
 
 # Verify the provided email and code
