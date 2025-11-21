@@ -18,13 +18,20 @@ BACK_URL = os.getenv("BACK_URL")
 # Create FastAPI instance
 app = FastAPI()
 
-# CORS configuration to allow the specified frontend URL
+# CORS configuration (Bearer Token + Header -> No neccesary for credentials)
+ALLOWED_ORIGINS = [
+    FRONT_URL if FRONT_URL else "https://finance-tree.vercel.app",
+    "http://localhost:3000",  # For local development
+]
+
+# Remove None & Duplication
+ALLOWED_ORIGINS = list({o for o in ALLOWED_ORIGINS if o})
+
 app.add_middleware(
     CORSMiddleware,
-    # allow_origins=[FRONT_URL, BACK_URL],
-    allow_origins=["*"],      # <-- Debuging: temporary plan
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=False,  # No cookie..
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -37,7 +44,7 @@ async def startup():
     print("Connecting to the database")
     await database.connect()
 
-# # # Disconnect from the database on shutdown
+# Disconnect from the database on shutdown
 @app.on_event("shutdown")
 async def shutdown():
     print("Disconnecting from the database")
@@ -51,7 +58,7 @@ app.include_router(test.router, prefix="/test")
 @app.get("/")
 async def root():
     return {
-        "message": "Version Code - 30",
+        "message": "Version Code - 40",
         "FRONT": FRONT_URL,
-        "BACK": BACK_URL
-        }
+        "BACK": BACK_URL,
+    }
