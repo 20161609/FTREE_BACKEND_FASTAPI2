@@ -12,8 +12,8 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# FRONT_URL = os.getenv("FRONT_URL")
-# BACK_URL = os.getenv("BACK_URL")
+FRONT_URL = os.getenv("FRONT_URL")
+BACK_URL = os.getenv("BACK_URL")
 
 # Create FastAPI instance
 app = FastAPI()
@@ -21,7 +21,7 @@ app = FastAPI()
 # CORS configuration to allow the specified frontend URL
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['*'],
+    allow_origins=[FRONT_URL, BACK_URL],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
