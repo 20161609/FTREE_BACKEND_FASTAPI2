@@ -35,8 +35,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/signin/")
 router = APIRouter()
 
-
-# 공용: Authorization 헤더의 Bearer 토큰에서 uid 뽑기
+# Get uid(Public)
 async def get_current_uid(token: str = Depends(oauth2_scheme)) -> int:
     return decode_access_token(token)
 
@@ -86,26 +85,27 @@ async def verify_email(data: dict = Body(...)):
 # Verify the provided email and code
 @router.get("/verify-email/")
 async def check_verification_code(email: str = Query(...), code: str = Query(...)):
+    # Bad Request
     if not email or not code:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email and verification code are required.")
 
+    # Verification
     verification = await database.fetch_one(
         EmailVerification.__table__.select().where(EmailVerification.email == email)
     )
-
     if not verification:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No verification information found for this email.",
         )
-
     if verification["code"] != code:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Verification code does not match.",
         )
-
     created_at = verification["created_at"]
+
+    # Send Email
     current_time = datetime.utcnow()
     if current_time - created_at > timedelta(minutes=15):
         query = EmailVerification.__table__.delete().where(EmailVerification.email == email)
@@ -115,6 +115,7 @@ async def check_verification_code(email: str = Query(...), code: str = Query(...
             detail="Verification code has expired.",
         )
 
+    # Update DB.
     query = EmailVerification.__table__.update().where(
         EmailVerification.email == email
     ).values(verified=datetime.utcnow())
@@ -126,25 +127,24 @@ async def check_verification_code(email: str = Query(...), code: str = Query(...
 # Signup API
 @router.post("/signup/")
 async def signup(data: dict = Body(...)):
+    # Get User's info
     email = data.get("email")
     password = data.get("password")
     username = data.get("username")
-
     if not email or not password or not username:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email, password, and username are required.",
         )
-
     try:
         is_valid_password(password)
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-
     user = await database.fetch_one(Auth.__table__.select().where(Auth.email == email))
     if user:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email is already in use.")
 
+    # Check if it can be signed up.
     verification = await database.fetch_one(
         EmailVerification.__table__.select().where(EmailVerification.email == email)
     )
@@ -154,8 +154,9 @@ async def signup(data: dict = Body(...)):
             detail="Email verification is required.",
         )
 
+    
+    # Update DB and create account
     hashed_password = hash_password(password)
-
     query = Auth.__table__.insert().values(
         username=username,
         email=email,
@@ -163,33 +164,30 @@ async def signup(data: dict = Body(...)):
         create_time=datetime.utcnow(),
     )
     await database.execute(query)
-
     user = await database.fetch_one(Auth.__table__.select().where(Auth.email == email))
     uid = user["uid"]
-
     query = Branch.__table__.insert().values(uid=uid, path="Home")
     await database.execute(query)
-
     query = EmailVerification.__table__.delete().where(EmailVerification.email == email)
     await database.execute(query)
 
     return {"message": "Signup successful."}
 
 
-# Signin API (쿠키 X, 토큰 JSON으로 반환)
+# Signin API
 @router.post("/signin/")
 async def signin(data: dict = Body(...)):
+    # Get User input datas [EMAIL], [PW].
     email = data.get("email")
     password = data.get("password")
-
     if not email or not password:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email and password are required.",
         )
-
+    
+    # Check the validation of user inputed.
     user = await database.fetch_one(Auth.__table__.select().where(Auth.email == email))
-
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User does not exist.")
 
@@ -199,13 +197,12 @@ async def signin(data: dict = Body(...)):
             detail="Incorrect password.",
         )
 
+    # DB update: get token
     access_token = create_access_token(data={"sub": str(user["uid"])})
     refresh_token = create_refresh_token(data={"sub": str(user["uid"])})
-
     existing_token = await database.fetch_one(
         Token.__table__.select().where(Token.uid == user["uid"])
     )
-
     if existing_token:
         query = Token.__table__.update().where(Token.uid == user["uid"]).values(
             access_token=access_token,
@@ -222,7 +219,7 @@ async def signin(data: dict = Body(...)):
         )
     await database.execute(query)
 
-    # ✅ 쿠키 안 쓰고 JSON으로 토큰 반환
+    # Success
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -231,15 +228,15 @@ async def signin(data: dict = Body(...)):
     }
 
 
-# Get user information API (Bearer 토큰 기반)
+# Get user information API with token
 @router.get("/get-user/")
 async def get_user(uid: int = Depends(get_current_uid)):
     query = Auth.__table__.select().where(Auth.uid == uid)
     user_info = await database.fetch_one(query)
-
     if not user_info:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User information not found.")
-
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="User information not found.")
     return {"message": user_info}
 
 
@@ -295,9 +292,10 @@ async def delete_account(uid: int = Depends(get_current_uid)):
     return {"status": "success", "message": "Your account and associated data have been deleted successfully."}
 
 
-# Signout API (Token 테이블만 정리)
+# Signout API
 @router.post("/signout/")
 async def signout(uid: int = Depends(get_current_uid)):
+    # DB delete: remove token from current user.
     try:
         delete_token_query = Token.__table__.delete().where(Token.uid == uid)
         await database.execute(delete_token_query)
@@ -307,7 +305,7 @@ async def signout(uid: int = Depends(get_current_uid)):
             detail=f"Failed to delete the user's token: {str(e)}",
         )
 
-    # 프론트에서 sessionStorage/localStorage 비우는 걸로 Logout 처리
+    # make the localStorage empty
     return {"status": "success", "message": "You have been signed out successfully."}
 
 

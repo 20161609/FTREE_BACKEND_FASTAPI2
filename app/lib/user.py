@@ -176,5 +176,4 @@ def generate_valid_password(length=8):
     password += random.choices(all_valid_characters, k=length - len(password))
 
     random.shuffle(password)
-
     return ''.join(password)

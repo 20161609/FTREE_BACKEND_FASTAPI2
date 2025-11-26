@@ -1,0 +1,46 @@
+Trip (root)
+ ├─ Transportation
+ │    ├─ Flight
+ │    └─ Taxi
+ ├─ Meal & Drink
+ ├─ Accommodation
+ └─ Activity
+
+
+Home (root)
+ ├─ Travel Expense
+ │    ├─ Domestic Travel
+ │    │    ├─ Transportation
+ │    │    │    ├─ Taxi
+ │    │    │    └─ Bus
+ │    │    └─ Accommodation
+ │    │         ├─ Hotel
+ │    │         └─ Guesthouse
+ │    └─ International Travel
+ │         ├─ Flight
+ │         └─ Visa Fee
+ ├─ Event Expense
+ │    ├─ Annual Events
+ │    │    ├─ Year-End Party
+ │    │    │    ├─ Venue
+ │    │    │    └─ Catering
+ │    │    └─ Summer Festival
+ │    └─ Special Events
+ │         ├─ Product Launch
+ │         │    ├─ Advertising
+ │         │    └─ Booth Setup
+ │         └─ Community Event
+ ├─ Operations
+ │    ├─ Office Supplies
+ │    │    ├─ Stationery
+ │    │    └─ Printing
+ │    └─ Utilities
+ │         ├─ Electricity
+ │         └─ Internet
+ └─ Staff Welfare
+      ├─ Meal Support
+      │    ├─ Lunch
+      │    └─ Dinner
+      └─ Team Building
+           ├─ Outdoor Activity
+           └─ Workshop

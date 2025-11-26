@@ -27,7 +27,7 @@ async def execute_del_transaction(uid: str, tid_list: list):
             if not file_name:
                 continue
 
-            file_path = f'{uid}/{file_name}'
+            # file_path = f'{uid}/{file_name}'
             await delete_image(uid, file_name)
             
 
