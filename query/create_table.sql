@@ -1,4 +1,4 @@
--- Auth 테이블 생성
+-- Auth table
 CREATE TABLE auth (
     uid SERIAL PRIMARY KEY,
     username VARCHAR(255) NOT NULL,
@@ -6,24 +6,25 @@ CREATE TABLE auth (
     password VARCHAR(255) NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
     create_time TIMESTAMP DEFAULT NOW(),
-    update_time TIMESTAMP DEFAULT NOW()
+    update_time TIMESTAMP DEFAULT NOW(),
+    useai BOOLEAN DEFAULT FALSE
 );
 
--- Role 테이블 생성
+-- Role table
 CREATE TABLE role (
     role_id SERIAL PRIMARY KEY,
     role_name VARCHAR(50) UNIQUE NOT NULL
 );
 
--- EmailVerification 테이블 생성
+-- EmailVerification table
 CREATE TABLE email_verification (
     code VARCHAR(255) PRIMARY KEY,
     email VARCHAR(255) NOT NULL UNIQUE,
     verified TIMESTAMP DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT NOW() 
+    created_at TIMESTAMP DEFAULT NOW()
 );
 
--- Branch 테이블 생성
+-- Branch table
 CREATE TABLE branch (
     bid SERIAL PRIMARY KEY,
     uid INTEGER NOT NULL,
@@ -31,7 +32,7 @@ CREATE TABLE branch (
     FOREIGN KEY (uid) REFERENCES auth(uid)
 );
 
--- Transaction 테이블 생성
+-- Transaction table
 CREATE TABLE transaction (
     tid SERIAL PRIMARY KEY,
     t_date DATE NOT NULL,
@@ -40,11 +41,11 @@ CREATE TABLE transaction (
     description TEXT,
     c_date TIMESTAMP DEFAULT NOW(),
     uid INTEGER NOT NULL,
-    receipt BYTEA,
+    receipt VARCHAR(255),
     FOREIGN KEY (uid) REFERENCES auth(uid)
 );
 
--- UserRole 테이블 생성
+-- UserRole table
 CREATE TABLE user_role (
     user_role_id SERIAL PRIMARY KEY,
     uid INTEGER NOT NULL,
@@ -53,7 +54,7 @@ CREATE TABLE user_role (
     FOREIGN KEY (role_id) REFERENCES role(role_id)
 );
 
--- Token 테이블 생성
+-- Token table
 CREATE TABLE token (
     token_id SERIAL PRIMARY KEY,
     uid INTEGER NOT NULL,
@@ -63,9 +64,3 @@ CREATE TABLE token (
     expires_at TIMESTAMP NOT NULL,
     FOREIGN KEY (uid) REFERENCES auth(uid)
 );
-
-로컬 -> 프로덕션
-1. Cookie Secure -> TRUE
-2. end file -> SQL
-3. env file -> front domain
-4. set cookie -> domain
